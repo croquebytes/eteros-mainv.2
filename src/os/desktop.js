@@ -13,6 +13,7 @@ import {
 import { getDungeonStats } from '../state/dungeonRunner.js';
 import { soundManager } from './soundManager.js';
 import { notificationSystem } from './notificationSystem.js';
+import { mobileUI } from './mobileUI.js';
 
 const APPS = [
   { id: 'questExplorer', label: 'Quest Explorer', icon: '⚔️' },
@@ -185,13 +186,9 @@ export function createDesktop() {
     desktopEl.appendChild(gridOverlay);
   }
 
-  // Add mobile home button
+  // Initialize Mobile UI if in mobile mode
   if (settings.isMobileMode) {
-    // We now use a full bottom nav bar instead of just a home button
-    // But we keep the home button logic if needed, or just replace it.
-    // Let's add the full mobile nav.
-    const mobileNav = createMobileNav();
-    desktopEl.appendChild(mobileNav);
+    mobileUI.init(desktopEl);
   }
 
   // Update mobile mode on resize
@@ -228,6 +225,9 @@ function makeIconDraggable(iconEl, iconId) {
   let dragOffsetX = 0; // Offset from cursor to icon top-left
   let dragOffsetY = 0;
   let movedDuringDrag = false;
+  let startX = 0;
+  let startY = 0;
+  const DRAG_THRESHOLD = 5; // Pixels to move before drag starts
 
   function handleMouseDown(e) {
     // Only drag on single click, not double-click
@@ -242,6 +242,9 @@ function makeIconDraggable(iconEl, iconId) {
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
+    startX = clientX;
+    startY = clientY;
+
     // Calculate offset from cursor to icon's current position
     const rect = iconEl.getBoundingClientRect();
 
@@ -249,10 +252,9 @@ function makeIconDraggable(iconEl, iconId) {
     dragOffsetX = clientX - rect.left;
     dragOffsetY = clientY - rect.top;
 
-    isDragging = true;
+    // Don't set isDragging yet, wait for move
+    isDragging = false;
     movedDuringDrag = false;
-    iconEl.classList.add('desktop-icon--dragging');
-    iconEl.style.userSelect = 'none';
 
     // Add document listeners only when actively dragging
     document.addEventListener('mousemove', handleMouseMove);
@@ -262,17 +264,40 @@ function makeIconDraggable(iconEl, iconId) {
   }
 
   function handleMouseMove(e) {
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    checkDragStart(clientX, clientY);
+
     if (!isDragging) return;
     e.preventDefault();
 
-    updatePosition(e.clientX, e.clientY);
+    updatePosition(clientX, clientY);
   }
 
   function handleTouchMove(e) {
+    const clientX = e.touches[0].clientX;
+    const clientY = e.touches[0].clientY;
+
+    checkDragStart(clientX, clientY);
+
     if (!isDragging) return;
     e.preventDefault();
 
-    updatePosition(e.touches[0].clientX, e.touches[0].clientY);
+    updatePosition(clientX, clientY);
+  }
+
+  function checkDragStart(x, y) {
+    if (isDragging) return;
+
+    const dx = Math.abs(x - startX);
+    const dy = Math.abs(y - startY);
+
+    if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
+      isDragging = true;
+      iconEl.classList.add('desktop-icon--dragging');
+      iconEl.style.userSelect = 'none';
+    }
   }
 
   function updatePosition(clientX, clientY) {
@@ -298,16 +323,22 @@ function makeIconDraggable(iconEl, iconId) {
   }
 
   function handleMouseUp(e) {
-    if (!isDragging) return;
     finishDrag();
   }
 
   function handleTouchEnd(e) {
-    if (!isDragging) return;
     finishDrag();
   }
 
   function finishDrag() {
+    // Remove document listeners
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+    document.removeEventListener('touchmove', handleTouchMove);
+    document.removeEventListener('touchend', handleTouchEnd);
+
+    if (!isDragging) return;
+
     isDragging = false;
     iconEl.classList.remove('desktop-icon--dragging');
     iconEl.style.userSelect = '';
@@ -346,12 +377,6 @@ function makeIconDraggable(iconEl, iconId) {
         delete iconEl.dataset.justDragged;
       }, 250);
     }
-
-    // Remove document listeners
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-    document.removeEventListener('touchmove', handleTouchMove);
-    document.removeEventListener('touchend', handleTouchEnd);
   }
 
   // Only attach mousedown to the icon itself

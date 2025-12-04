@@ -292,6 +292,9 @@ export const windowManager = {
     let dragOffsetX = 0; // Offset from cursor to window top-left
     let dragOffsetY = 0;
     let wasMaximized = false;
+    let startX = 0;
+    let startY = 0;
+    const DRAG_THRESHOLD = 5;
 
     const self = this;
 
@@ -304,6 +307,9 @@ export const windowManager = {
       // Normalize touch/mouse events
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      startX = clientX;
+      startY = clientY;
 
       // If window is maximized, restore it but keep dragging from cursor position
       const state = getDesktopState();
@@ -337,11 +343,8 @@ export const windowManager = {
         dragOffsetY = clientY - rect.top;
       }
 
-      isDragging = true;
-
-      titleBar.style.cursor = 'grabbing';
-      winEl.style.userSelect = 'none';
-      winEl.classList.add('os-window--dragging');
+      // Don't start dragging yet
+      isDragging = false;
 
       // Add document listeners only when actively dragging
       document.addEventListener('mousemove', handleMouseMove);
@@ -351,23 +354,41 @@ export const windowManager = {
     }
 
     function handleMouseMove(e) {
-      if (!isDragging) return;
-      e.preventDefault();
-
       const clientX = e.clientX;
       const clientY = e.clientY;
+
+      checkDragStart(clientX, clientY);
+
+      if (!isDragging) return;
+      e.preventDefault();
 
       updatePosition(clientX, clientY);
     }
 
     function handleTouchMove(e) {
-      if (!isDragging) return;
-      e.preventDefault();
-
       const clientX = e.touches[0].clientX;
       const clientY = e.touches[0].clientY;
 
+      checkDragStart(clientX, clientY);
+
+      if (!isDragging) return;
+      e.preventDefault();
+
       updatePosition(clientX, clientY);
+    }
+
+    function checkDragStart(x, y) {
+      if (isDragging) return;
+
+      const dx = Math.abs(x - startX);
+      const dy = Math.abs(y - startY);
+
+      if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
+        isDragging = true;
+        titleBar.style.cursor = 'grabbing';
+        winEl.style.userSelect = 'none';
+        winEl.classList.add('os-window--dragging');
+      }
     }
 
     function updatePosition(clientX, clientY) {
@@ -398,16 +419,22 @@ export const windowManager = {
     }
 
     function handleMouseUp(e) {
-      if (!isDragging) return;
       finishDrag();
     }
 
     function handleTouchEnd(e) {
-      if (!isDragging) return;
       finishDrag();
     }
 
     function finishDrag() {
+      // Remove document listeners after drag is complete
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+
+      if (!isDragging) return;
+
       isDragging = false;
       titleBar.style.cursor = 'default';
       winEl.style.userSelect = '';
@@ -471,12 +498,6 @@ export const windowManager = {
 
       hideSnapPreview();
       wasMaximized = false;
-
-      // Remove document listeners after drag is complete
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
     }
 
     // Only attach mousedown to the titlebar itself
