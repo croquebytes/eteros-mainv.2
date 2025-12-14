@@ -572,12 +572,53 @@ function completeWave() {
 
   // Advance wave and spawn new enemies
   gameState.wave += 1;
+
+  // Check for Dungeon Completion (if not infinite)
+  if (dungeon.waves && dungeon.waves !== Infinity && gameState.wave > dungeon.waves) {
+    completeDungeon(dungeon);
+    return;
+  }
+
   if (gameState.activeDungeonRun) {
     gameState.activeDungeonRun.currentWave = gameState.wave;
     gameState.activeDungeonRun.lastTickAt = Date.now();
   }
   spawnEnemies();
 
+  notify();
+}
+
+function completeDungeon(dungeon) {
+  gameState.dungeonState.running = false;
+
+  // Calculate total earnings
+  const summary = {
+    dungeonId: dungeon.id,
+    dungeonName: dungeon.name,
+    wavesCleared: dungeon.waves,
+    goldEarned: gameState.activeDungeonRun?.totalGoldEarned || 0, // This needs to be tracked if not already
+    xpEarned: 0, // Track if possible, or just estimate
+    itemsFound: [], // Track items
+    completedAt: Date.now()
+  };
+
+  // Handle unlock requirements (Story Progress)
+  if (dungeon.type === 'story') {
+    const nodeNum = parseInt(dungeon.id.replace('story_node_', ''));
+    if (!isNaN(nodeNum)) {
+      gameState.highestStoryNodeCleared = Math.max(gameState.highestStoryNodeCleared || 0, nodeNum);
+    }
+  }
+
+  // Set pending result for UI
+  gameState.pendingDungeonResult = summary;
+
+  // Clear active run
+  gameState.activeDungeonRun = null;
+
+  if (battleNotify) {
+    battleNotify(`Dungeon Complete! ${dungeon.name} Conquered!`, 'success');
+  }
   notify();
 }
 

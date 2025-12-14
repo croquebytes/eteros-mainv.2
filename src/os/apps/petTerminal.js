@@ -1,23 +1,18 @@
+import { gameState, saveGame } from '../../state/enhancedGameState.js';
+
 export const petTerminalApp = {
   id: 'petTerminal',
   title: 'Daemonling Pet',
   createContent(rootEl) {
-    const petState = {
-      name: 'Daemonling',
-      hunger: 72,
-      energy: 65,
-      mood: 45,
-      stability: 70,
-      curiosity: 55,
-      lastLog: 'Wakes up and blinks at the cursor.',
-    };
+    // Use global pet state from gameState
+    const petState = gameState.petState;
 
     const actions = [
-      { key: 'feed', label: 'Feed', effect: () => { petState.hunger = clamp(petState.hunger + 12); petState.mood = clamp(petState.mood + 4, -50, 100); setLog('Crunches on code crumbs.'); } },
-      { key: 'play', label: 'Play', effect: () => { petState.mood = clamp(petState.mood + 8, -50, 100); petState.energy = clamp(petState.energy - 5); petState.curiosity = clamp(petState.curiosity + 6); setLog('Chases a packet sprite.'); } },
-      { key: 'rest', label: 'Rest', effect: () => { petState.energy = clamp(petState.energy + 15); petState.stability = clamp(petState.stability + 4); setLog('Enters low-power hibernation.'); } },
-      { key: 'debug', label: 'Debug', effect: () => { petState.stability = clamp(petState.stability + 10); petState.mood = clamp(petState.mood - 2, -50, 100); setLog('You patch a flickering glyph.'); } },
-      { key: 'praise', label: 'Praise', effect: () => { petState.mood = clamp(petState.mood + 5, -50, 100); petState.curiosity = clamp(petState.curiosity + 2); setLog('It hums happily.'); } },
+      { key: 'feed', label: 'Feed', effect: () => { petState.hunger = clamp(petState.hunger + 12); petState.mood = clamp(petState.mood + 4, -50, 100); setLog('Crunches on code crumbs.'); petState.lastInteraction = Date.now(); saveGame(); } },
+      { key: 'play', label: 'Play', effect: () => { petState.mood = clamp(petState.mood + 8, -50, 100); petState.energy = clamp(petState.energy - 5); petState.curiosity = clamp(petState.curiosity + 6); setLog('Chases a packet sprite.'); petState.lastInteraction = Date.now(); saveGame(); } },
+      { key: 'rest', label: 'Rest', effect: () => { petState.energy = clamp(petState.energy + 15); petState.stability = clamp(petState.stability + 4); setLog('Enters low-power hibernation.'); petState.lastInteraction = Date.now(); saveGame(); } },
+      { key: 'debug', label: 'Debug', effect: () => { petState.stability = clamp(petState.stability + 10); petState.mood = clamp(petState.mood - 2, -50, 100); setLog('You patch a flickering glyph.'); petState.lastInteraction = Date.now(); saveGame(); } },
+      { key: 'praise', label: 'Praise', effect: () => { petState.mood = clamp(petState.mood + 5, -50, 100); petState.curiosity = clamp(petState.curiosity + 2); setLog('It hums happily.'); petState.lastInteraction = Date.now(); saveGame(); } },
     ];
 
     rootEl.innerHTML = `

@@ -54,6 +54,10 @@ import { tasksSystem } from './state/tasksSystem.js';
 import { minerSystem } from './state/minerSystem.js';
 import { setResearchBonusesGetter, setHardwareBonusesGetter } from './state/heroSystem.js';
 import { prestigeSystem } from './state/prestigeSystem.js';
+import { trackDailyLogin, initDailyLoginState } from './state/dailyLoginSystem.js';
+import { showDailyLoginModal, shouldAutoShowDailyLogin } from './os/apps/dailyLoginModal.js';
+import { refreshDailyQuests, initDailyQuestState, initQuestTracking } from './state/dailyQuestSystem.js';
+import { dailyQuestsApp } from './os/apps/dailyQuestsApp.js';
 
 // Make gameState available globally for debugging
 window.gameState = gameState;
@@ -128,6 +132,7 @@ windowManager.registerApp(eBuyApp);
 windowManager.registerApp(overclockApp);
 windowManager.registerApp(gambitEditor);
 windowManager.registerApp(minerApp);
+windowManager.registerApp(dailyQuestsApp);
 
 // Start game systems
 startAutoSave();
@@ -145,6 +150,24 @@ setInterval(() => {
   resourceManager.tick(0.1); // 0.1 seconds
   minerSystem.tick(0.1);
 }, 100);
+
+// Initialize and track daily login
+initDailyLoginState();
+trackDailyLogin();
+
+// Initialize and refresh daily quests
+initDailyQuestState();
+refreshDailyQuests();
+initQuestTracking();
+
+// Auto-show daily login modal if reward is available
+setTimeout(() => {
+  if (shouldAutoShowDailyLogin()) {
+    showDailyLoginModal(document.body, () => {
+      console.log('Daily login modal closed');
+    });
+  }
+}, 1000); // Wait 1 second after boot to show modal
 
 console.log('ReincarnOS booted - All systems active');
 

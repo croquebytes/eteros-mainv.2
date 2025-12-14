@@ -96,6 +96,18 @@ export const gameState = {
   // Dispatch System
   dispatchState: createDispatchState(),
 
+  // Pet System
+  petState: {
+    name: 'Daemonling',
+    hunger: 72,
+    energy: 65,
+    mood: 45,
+    stability: 70,
+    curiosity: 55,
+    lastLog: 'Wakes up and blinks at the cursor.',
+    lastInteraction: Date.now()
+  },
+
   // Mailbox / Contracts
   mailboxState: {
     availableContracts: [],
@@ -455,12 +467,24 @@ function calculateOfflineProgress(state, offlineTimeMs) {
 
   const effectiveHours = Math.min(offlineHours, maxOfflineHours);
 
-  // Simplified offline gold gain
-  const offlineGold = Math.floor(effectiveHours * 100);  // 100 gold per hour
+  // Calculate base offline gold gain
+  let offlineGold = effectiveHours * 100;  // 100 gold per hour base
+
+  // Apply pet mood bonuses
+  const pet = state.petState;
+  if (pet && pet.mood > 80) {
+    offlineGold *= 1.05; // +5% bonus
+  } else if (pet && pet.mood > 60) {
+    offlineGold *= 1.02; // +2% bonus
+  }
+
+  offlineGold = Math.floor(offlineGold);
   state.gold += offlineGold;
   state.lifetimeGold += offlineGold;
 
-  console.log(`Offline progress: +${offlineGold} gold`);
+  // Log bonus if pet mood was high
+  const moodBonus = pet && pet.mood > 80 ? ' (+5% pet bonus!)' : pet && pet.mood > 60 ? ' (+2% pet bonus)' : '';
+  console.log(`Offline progress: +${offlineGold} gold${moodBonus}`);
 }
 
 export function serializeGameState() {
@@ -740,6 +764,38 @@ export function performPrestige() {
   saveGame();
 
   return { success: true, rewards };
+}
+
+// ===== Pet System Bonuses =====
+
+/**
+ * Calculate idle bonuses based on pet mood and stability
+ * High mood > 80 = +5% idle gold
+ * High stability > 85 = +10% offline XP
+ * @returns {Object} {idleGoldBonus, offlineXpBonus}
+ */
+export function calculatePetBonuses() {
+  const pet = gameState.petState;
+  const bonuses = {
+    idleGoldBonus: 0,
+    offlineXpBonus: 0
+  };
+
+  // Mood affects idle gold generation
+  if (pet.mood > 80) {
+    bonuses.idleGoldBonus = 0.05; // +5%
+  } else if (pet.mood > 60) {
+    bonuses.idleGoldBonus = 0.02; // +2%
+  }
+
+  // Stability affects offline XP
+  if (pet.stability > 85) {
+    bonuses.offlineXpBonus = 0.10; // +10%
+  } else if (pet.stability > 70) {
+    bonuses.offlineXpBonus = 0.05; // +5%
+  }
+
+  return bonuses;
 }
 
 // ===== Initialization =====

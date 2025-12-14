@@ -9,6 +9,7 @@ import { updateHeroStats } from '../../state/heroSystem.js';
 import { calculatePartyDamage, calculatePartyPower, getDungeonDifficulty, getDifficultyDisplay } from '../../state/partyPowerCalculator.js';
 import { getDungeonById } from '../../state/dungeonTemplates.js';
 import { FILE_SYSTEM, getFileSystemNode } from '../../state/fileSystem.js';
+import { getActiveSynergies } from '../../state/heroSynergies.js';
 
 export const questExplorerApp = {
   id: 'questExplorer',
@@ -86,6 +87,9 @@ export const questExplorerApp = {
                 <div class="stat-box">Gold: <span id="qe-gold">-</span></div>
                 <div class="stat-box">Progress: <div class="progress-bar-mini"><div id="qe-progress-fill"></div></div></div>
               </div>
+              <div class="synergy-display" id="qe-synergies" style="display: flex; gap: 8px; padding: 8px; flex-wrap: wrap; min-height: 32px;">
+                <!-- Synergies rendered here -->
+              </div>
               <div class="battle-scene">
                 <div class="battle-party" id="qe-party-list"></div>
                 <div class="battle-vs">VS</div>
@@ -158,12 +162,67 @@ export const questExplorerApp = {
       return '<div class="empty-folder">Empty Directory</div>';
     }
 
-    return directory.children.map(node => `
+    // Check if this is a directory of files (dungeons) or folders
+    const hasDungeons = directory.children.some(c => c.dungeonId || c.isRaid);
+
+    if (hasDungeons) {
+      return `<div class="dungeon-file-list">
+        ${directory.children.map(node => {
+        if (node.type !== 'file') return this.renderSimpleNode(node);
+
+        let dungeon = null;
+        if (node.isRaid) {
+          // Handle Raid Target
+          const target = node.raidTarget;
+          // Mock a dungeon object for display
+          dungeon = {
+            name: target.name,
+            type: 'raid',
+            recommendedPartyPower: target.power,
+            rewards: target.rewards
+          };
+        } else {
+          dungeon = getDungeonById(node.dungeonId);
+        }
+
+        if (!dungeon) return this.renderSimpleNode(node); // Fallback
+
+        const difficulty = getDungeonDifficulty(dungeon.recommendedPartyPower || 100);
+        const diffDisplay = getDifficultyDisplay(difficulty);
+
+        return `
+            <div class="dungeon-file-card fs-item" data-name="${node.name}" data-type="file">
+              <div class="df-icon">${node.icon}</div>
+              <div class="df-content">
+                <div class="df-header">
+                  <span class="df-name">${dungeon.name}</span>
+                  <span class="df-filename">${node.name}</span>
+                </div>
+                <div class="df-meta">
+                   <span class="df-tag df-difficulty" style="color: ${diffDisplay.color}">${diffDisplay.emoji} ${diffDisplay.label}</span>
+                   <span class="df-tag df-power">⚡ ${dungeon.recommendedPartyPower || '?'}</span>
+                </div>
+              </div>
+              <div class="df-action">
+                <span class="material-icon">▶</span>
+              </div>
+            </div>
+          `;
+      }).join('')}
+      </div>`;
+    }
+
+    // Default Grid for Folders
+    return directory.children.map(node => this.renderSimpleNode(node)).join('');
+  },
+
+  renderSimpleNode(node) {
+    return `
       <div class="fs-item ${node.type}" data-name="${node.name}" data-type="${node.type}">
         <div class="fs-icon">${node.icon || (node.type === 'folder' || node.type === 'drive' ? '📁' : '📄')}</div>
         <div class="fs-name">${node.name}</div>
       </div>
-    `).join('');
+    `;
   },
 
   attachEventListeners(rootEl) {
@@ -372,6 +431,33 @@ export const questExplorerApp = {
     if (goldEl) goldEl.textContent = Math.floor(stats.gold);
     if (progressFill) progressFill.style.width = `${stats.progress}%`;
 
+    // Update Synergies
+    const synergyEl = rootEl.querySelector('#qe-synergies');
+    if (synergyEl) {
+      const activeSynergies = getActiveSynergies();
+      if (activeSynergies.length > 0) {
+        synergyEl.innerHTML = activeSynergies.map(syn => `
+          <div class="synergy-badge" style="
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+          " title="${syn.description}">
+            <span>${syn.icon}</span>
+            <span>${syn.name}</span>
+          </div>
+        `).join('');
+      } else {
+        synergyEl.innerHTML = '<div style="color: #666; font-size: 11px; font-style: italic;">No active synergies</div>';
+      }
+    }
+
     // Update Party
     const partyList = rootEl.querySelector('#qe-party-list');
     if (partyList) {
@@ -465,7 +551,8 @@ export const questExplorerApp = {
               </div>
             ` : ''}
           </div>
-          <div class="qe-modal-footer">
+      <div class="qe-modal-footer">
+            <button id="qe-btn-rerun" class="btn btn-secondary">🔄 Re-Run Protocol</button>
             <button id="qe-btn-ack" class="btn btn-primary">Acknowledge</button>
           </div>
         </div>
@@ -475,6 +562,14 @@ export const questExplorerApp = {
     modalContainer.querySelector('#qe-btn-ack')?.addEventListener('click', () => {
       acknowledgePendingDungeonResult();
       modalContainer.innerHTML = '';
+      this.render(rootEl);
+    });
+
+    modalContainer.querySelector('#qe-btn-rerun')?.addEventListener('click', () => {
+      const dungeonId = result.dungeonId; // Ensure pendingDungeonResult has ID
+      acknowledgePendingDungeonResult();
+      modalContainer.innerHTML = '';
+      this.executeDungeon(dungeonId, rootEl);
     });
   },
 

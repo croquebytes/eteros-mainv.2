@@ -16,6 +16,7 @@ import { notificationSystem } from './notificationSystem.js';
 import { mobileUI } from './mobileUI.js';
 
 const APPS = [
+  { id: 'dailyRewards', label: 'Daily Rewards', icon: '📅' },
   { id: 'questExplorer', label: 'Quest Explorer', icon: '⚔️' },
   { id: 'mailClient', label: 'Mail Client', icon: '📧' },
   { id: 'taskScheduler', label: 'Task Scheduler', icon: '📅' },
@@ -213,6 +214,36 @@ export function createDesktop() {
       icon: '🚀',
       type: 'success'
     });
+
+    // Check Daily Rewards (Dynamic Import to avoid cycles if possible, or just use registered logic)
+    import('../state/dailyLoginSystem.js').then(({ canClaimDailyReward }) => {
+      if (canClaimDailyReward()) {
+        // Show Badge on Icon
+        const drIcon = document.querySelector('.desktop-icon[data-app-id="dailyRewards"]');
+        if (drIcon) {
+          const badge = document.createElement('div');
+          badge.className = 'icon-notification-badge'; // We need to style this
+          badge.textContent = '!';
+          drIcon.appendChild(badge);
+        }
+
+        // Show Notification
+        notificationSystem.show({
+          title: 'Daily Rewards Available',
+          message: 'Your daily login reward is ready to claim!',
+          icon: '🎁',
+          type: 'success',
+          onClick: () => windowManager.openWindow('dailyRewards')
+        });
+      }
+    });
+
+    // Global listener to remove badge
+    window.onDailyRewardClaimed = () => {
+      const badge = document.querySelector('.desktop-icon[data-app-id="dailyRewards"] .icon-notification-badge');
+      if (badge) badge.remove();
+    };
+
   }, 1000);
 
   return { desktopEl, windowLayerEl };

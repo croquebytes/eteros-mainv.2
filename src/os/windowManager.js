@@ -5,7 +5,8 @@ import {
   getDesktopState,
   addRunningWindow,
   removeRunningWindow,
-  getSettings
+  getSettings,
+  updateMobileMode
 } from './desktopState.js';
 import {
   getSnapZone,
@@ -37,6 +38,79 @@ export const windowManager = {
     window.addEventListener('popstate', (event) => {
       this.handlePopState(event);
     });
+
+    // Window Resize Support
+    window.addEventListener('resize', () => {
+      this.handleResize();
+    });
+  },
+
+  handleResize() {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const taskbarHeight = 40;
+
+    // Update Mobile Mode state
+    updateMobileMode();
+
+    Object.keys(this.windows).forEach(appId => {
+      const entry = this.windows[appId];
+      if (!entry || !entry.el) return;
+
+      const state = getDesktopState();
+      const winState = state.windows[appId];
+
+      if (winState?.isMaximized || winState?.snap === 'maximize') {
+        // Resize maximized window
+        entry.el.style.width = viewportWidth + 'px';
+        entry.el.style.height = (viewportHeight - taskbarHeight) + 'px';
+
+        updateWindowState(appId, {
+          width: viewportWidth,
+          height: viewportHeight - taskbarHeight
+        });
+      } else {
+        // Constrain window to viewport
+        let x = parseInt(entry.el.style.left) || 0;
+        let y = parseInt(entry.el.style.top) || 0;
+        let w = parseInt(entry.el.style.width) || 600;
+        let h = parseInt(entry.el.style.height) || 400;
+
+        let changed = false;
+
+        // If window is larger than viewport, resize it
+        if (w > viewportWidth) {
+          w = viewportWidth;
+          entry.el.style.width = w + 'px';
+          changed = true;
+        }
+        if (h > (viewportHeight - taskbarHeight)) {
+          h = viewportHeight - taskbarHeight;
+          entry.el.style.height = h + 'px';
+          changed = true;
+        }
+
+        // Bring into view
+        if (x + w > viewportWidth) {
+          x = Math.max(0, viewportWidth - w);
+          entry.el.style.left = x + 'px';
+          changed = true;
+        }
+        if (y + h > (viewportHeight - taskbarHeight)) {
+          y = Math.max(0, viewportHeight - taskbarHeight - h);
+          entry.el.style.top = y + 'px';
+          changed = true;
+        }
+
+        // Update state if changed
+        if (changed) {
+          updateWindowState(appId, { x, y, width: w, height: h });
+        }
+      }
+    });
+
+    // Refresh snap slots
+    // (Optional: if snapPreview.js cached them, we might need to tell it updates, but it recomputes on drag)
   },
 
   handlePopState(event) {
@@ -423,6 +497,24 @@ export const windowManager = {
 
     function updatePosition(clientX, clientY) {
       // Calculate new position (cursor - offset = top-left of window)
+      const settings = getSettings();
+
+      // MOBILE SWIPE GESTURE LOGIC
+      if (settings.isMobileMode) {
+        const dy = clientY - startY;
+
+        // Prevent dragging UP (scrolling?) or dragging SIDEWAYS too much
+        if (dy < 0) return;
+
+        // Apply resistance/transform specifically for the swipe effect
+        winEl.style.transform = `translateY(${dy}px) scale(${1 - (dy / window.innerHeight) * 0.1})`;
+        winEl.style.transition = 'none'; // distinct direct control
+
+        // We do NOT update left/top for mobile; controls maximize layout
+        return;
+      }
+
+      // DESKTOP DRAG LOGIC
       let newX = clientX - dragOffsetX;
       let newY = clientY - dragOffsetY;
 
@@ -437,7 +529,7 @@ export const windowManager = {
       winEl.style.top = newY + 'px';
 
       // Show snap preview if near edges
-      const settings = getSettings();
+      // Show snap preview if near edges
       if (settings.snapEnabled) {
         const rect = winEl.getBoundingClientRect();
         const centerX = rect.left + (rect.width / 2);
@@ -449,14 +541,14 @@ export const windowManager = {
     }
 
     function handleMouseUp(e) {
-      finishDrag();
+      finishDrag(e);
     }
 
     function handleTouchEnd(e) {
-      finishDrag();
+      finishDrag(e);
     }
 
-    function finishDrag() {
+    function finishDrag(e) {
       // Remove document listeners after drag is complete
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
@@ -470,12 +562,27 @@ export const windowManager = {
       winEl.style.userSelect = '';
       winEl.classList.remove('os-window--dragging');
 
+      const settings = getSettings();
+
+      // MOBILE SWIPE COMPLETE CHECK
+      if (settings.isMobileMode) {
+        const dy = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY) - startY;
+
+        // Clear temporary transform
+        winEl.style.transform = '';
+        winEl.style.transition = '';
+
+        if (dy > 150) { // Threshold to close
+          self.minimizeWindow(appId);
+        }
+        return;
+      }
+
       // Get current window position
       const currentLeft = parseFloat(winEl.style.left) || 0;
       const currentTop = parseFloat(winEl.style.top) || 0;
 
       // Apply snap if in snap zone
-      const settings = getSettings();
       if (settings.snapEnabled) {
         const rect = winEl.getBoundingClientRect();
         const centerX = rect.left + (rect.width / 2);

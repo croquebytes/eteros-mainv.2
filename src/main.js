@@ -9,6 +9,7 @@ import { autoResumeDungeon } from './state/dungeonRunner.js';
 
 // Import apps
 import { questExplorerApp } from './os/apps/questExplorer.js';
+import { dailyRewardsApp } from './os/apps/dailyRewardsApp.js';
 import { mailClientApp } from './os/apps/mailClient.js';
 import { taskSchedulerUIApp } from './os/apps/taskSchedulerApp.js';
 import { researchLabApp } from './os/apps/researchLab.js';
@@ -93,6 +94,7 @@ initSystemSkills(gameState);
 hookSkillXpGains(gameState);
 
 // Register apps with window manager
+windowManager.registerApp(dailyRewardsApp);
 windowManager.registerApp(questExplorerApp);
 windowManager.registerApp(mailClientApp);
 windowManager.registerApp(taskSchedulerUIApp);

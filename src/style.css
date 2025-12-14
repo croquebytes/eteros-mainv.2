@@ -9818,3 +9818,273 @@ body.compact-mode .enemy-card {
     display: block;
   }
 }
+/* ===== Snap Preview & Window Animations (Agentic Enhancements) ===== */
+
+.snap-preview {
+  position: absolute;
+  border-radius: 12px;
+  background: rgba(96, 165, 250, 0.15);
+  border: 2px solid rgba(96, 165, 250, 0.6);
+  box-shadow: 0 0 20px rgba(96, 165, 250, 0.3), inset 0 0 20px rgba(96, 165, 250, 0.1);
+  backdrop-filter: blur(4px);
+  z-index: 10000;
+  pointer-events: none;
+  transition: all 0.1s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.snap-preview::after {
+  content: attr(data-snap-label);
+  color: rgba(96, 165, 250, 0.9);
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(96, 165, 250, 0.6);
+}
+
+@keyframes windowOpen {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes windowClose {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+    filter: blur(5px);
+  }
+}
+
+.animating-open {
+  animation: windowOpen 0.35s cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+}
+
+.animating-close {
+  animation: windowClose 0.25s cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+}
+
+.os-window--minimized {
+  opacity: 0;
+  transform: scale(0.5) translateY(300px);
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Extra Ethos: Selection Color */
+::selection {
+  background: rgba(124, 58, 237, 0.5);
+  color: white;
+}
+
+/* ===== Enhanced Dungeon File Browser (Proprietary Improvements) ===== */
+
+/* List Layout */
+.dungeon-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding-right: 4px;
+}
+
+/* Dungeon Card */
+.dungeon-file-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  background: linear-gradient(90deg, rgba(5, 12, 25, 0.8) 0%, rgba(20, 30, 50, 0.6) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid rgba(96, 165, 250, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 60px;
+}
+
+.dungeon-file-card:hover {
+  background: linear-gradient(90deg, rgba(20, 30, 50, 0.9) 0%, rgba(30, 45, 75, 0.7) 100%);
+  border-left-color: #60a5fa;
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.df-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.3));
+}
+
+.df-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.df-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.df-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: #f5f5f5;
+}
+
+.df-filename {
+  font-family: monospace;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.df-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.df-tag {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.df-action {
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: all 0.2s ease;
+  color: #60a5fa;
+}
+
+.dungeon-file-card:hover .df-action {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Detail Panel Enhancements */
+.file-details-content {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(10, 15, 30, 0.98));
+  border: 1px solid #334155;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+/* ===== Mobile Responsiveness Improvements ===== */
+
+@media (max-width: 768px) {
+  /* Quest Explorer Mobile Layout */
+  .quest-explorer-fs {
+    flex-direction: column;
+  }
+
+  .qe-fs-toolbar {
+    padding: 8px;
+    gap: 8px;
+  }
+  
+  .qe-address-bar {
+    font-size: 12px;
+  }
+
+  /* Force only one view to be visible (already handled by display toggle in JS, but ensure full height) */
+  .qe-fs-main {
+    flex: 1;
+    overflow: hidden;
+  }
+  
+  .qe-fs-browser,
+  .qe-process-monitor {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Stack battle stats on mobile */
+  .battle-stats-row {
+    flex-wrap: wrap;
+  }
+  
+  .stat-box {
+    flex: 1;
+    min-width: 30%;
+    font-size: 11px;
+  }
+
+  /* Make dungeon list more compact if needed, but the card design is good */
+  .dungeon-file-card {
+    padding: 10px;
+    gap: 12px;
+  }
+
+  .df-action {
+    display: none; /* Hide hover action on mobile */
+  }
+
+  /* Ensure detail panel fits */
+  .qe-file-details {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    padding: 10px;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .file-details-content {
+    width: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+  }
+}
+
+/* ===== Desktop Icon Badges ===== */
+.icon-notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 20px;
+  height: 20px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  border: 2px solid #0f172a;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* Modal deprecated styles cleanups if needed, but we keep them for compatibility for now */

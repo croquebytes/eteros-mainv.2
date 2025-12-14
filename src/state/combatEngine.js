@@ -3,6 +3,11 @@
 
 import { CONFIG } from './config.js';
 import { gameState, createEnemy, generateItem, saveGame } from './gameState.js';
+import {
+  getActiveSynergies,
+  calculateSynergyBonuses,
+  getSynergyCritBonus
+} from './heroSynergies.js';
 
 // ===== Combat State =====
 let combatInterval = null;
@@ -254,7 +259,7 @@ function onEnemyKilled(enemy) {
 // ===== Stat Calculation Helpers =====
 
 /**
- * Get hero's total max HP (base + equipment + upgrades)
+ * Get hero's total max HP (base + equipment + upgrades + synergies)
  */
 function getHeroMaxHp(hero) {
   let maxHp = hero.maxHp;
@@ -275,11 +280,15 @@ function getHeroMaxHp(hero) {
   const sigilBonus = 1 + (gameState.sigilPoints * CONFIG.sigilBonusPerPoint);
   maxHp = Math.floor(maxHp * sigilBonus);
 
+  // Apply synergy bonuses
+  const synergyBonuses = calculateSynergyBonuses();
+  maxHp = Math.floor(maxHp * synergyBonuses.maxHpMultiplier * synergyBonuses.allStatsMultiplier);
+
   return maxHp;
 }
 
 /**
- * Get hero's total attack
+ * Get hero's total attack (includes synergy bonuses)
  */
 function getHeroAttack(hero) {
   let attack = hero.attack;
@@ -300,11 +309,20 @@ function getHeroAttack(hero) {
   const sigilBonus = 1 + (gameState.sigilPoints * CONFIG.sigilBonusPerPoint);
   attack = Math.floor(attack * sigilBonus);
 
+  // Apply synergy bonuses
+  const synergyBonuses = calculateSynergyBonuses();
+  attack = Math.floor(attack * synergyBonuses.damageMultiplier * synergyBonuses.allStatsMultiplier);
+
+  // Apply spell damage multiplier for mages
+  if (hero.class === 'mage') {
+    attack = Math.floor(attack * synergyBonuses.spellDamageMultiplier);
+  }
+
   return attack;
 }
 
 /**
- * Get hero's total defense
+ * Get hero's total defense (includes synergy bonuses)
  */
 function getHeroDefense(hero) {
   let defense = hero.defense;
@@ -325,11 +343,20 @@ function getHeroDefense(hero) {
   const sigilBonus = 1 + (gameState.sigilPoints * CONFIG.sigilBonusPerPoint);
   defense = Math.floor(defense * sigilBonus);
 
+  // Apply synergy bonuses
+  const synergyBonuses = calculateSynergyBonuses();
+  defense = Math.floor(defense * synergyBonuses.defenseMultiplier * synergyBonuses.allStatsMultiplier);
+
+  // Apply extra warrior defense bonus
+  if (hero.class === 'warrior') {
+    defense = Math.floor(defense * (1 + synergyBonuses.warriorDefenseBonus));
+  }
+
   return defense;
 }
 
 /**
- * Get hero's crit chance
+ * Get hero's crit chance (includes synergy bonuses)
  */
 function getHeroCritChance(hero) {
   let critChance = hero.critChance;
@@ -344,6 +371,9 @@ function getHeroCritChance(hero) {
 
   // Add upgrade bonuses
   critChance += (gameState.upgrades.critChance * CONFIG.upgrades.critChance.effect);
+
+  // Apply synergy bonuses
+  critChance += getSynergyCritBonus();
 
   return Math.min(critChance, 1.0); // Cap at 100%
 }
@@ -486,6 +516,8 @@ function notifyUIUpdate() {
 // ===== Export Combat Stats (for display) =====
 
 export function getCombatStats() {
+  const activeSynergies = getActiveSynergies();
+
   return {
     wave: gameState.wave,
     gold: gameState.gold,
@@ -506,6 +538,7 @@ export function getCombatStats() {
       hpPercent: Math.floor((e.currentHp / e.maxHp) * 100)
     })),
     combatActive: gameState.combatActive,
-    currentEvent: gameState.currentEvent
+    currentEvent: gameState.currentEvent,
+    activeSynergies: activeSynergies
   };
 }
