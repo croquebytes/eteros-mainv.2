@@ -55,12 +55,13 @@ import { minerSystem } from './state/minerSystem.js';
 import { setResearchBonusesGetter, setHardwareBonusesGetter } from './state/heroSystem.js';
 import { prestigeSystem } from './state/prestigeSystem.js';
 import { trackDailyLogin, initDailyLoginState } from './state/dailyLoginSystem.js';
-import { showDailyLoginModal, shouldAutoShowDailyLogin } from './os/apps/dailyLoginModal.js';
+import { dailyRewardsApp } from './os/apps/dailyRewardsApp.js'; // Updated import
 import { refreshDailyQuests, initDailyQuestState, initQuestTracking } from './state/dailyQuestSystem.js';
 import { dailyQuestsApp } from './os/apps/dailyQuestsApp.js';
 
 // Make gameState available globally for debugging
 window.gameState = gameState;
+prestigeSystem.setGameState(gameState); // Inject state into prestige system to avoid circular dep crash
 window.windowManager = windowManager; // Expose for debugging
 
 // Initialize toast notification system
@@ -113,6 +114,7 @@ windowManager.registerApp(recycleShrineApp);
 windowManager.registerApp(systemSigilsApp);
 windowManager.registerApp(speculationTerminalApp);
 windowManager.registerApp(settingsApp);
+windowManager.registerApp(dailyRewardsApp); // Register new app
 
 // NEW APPS (Phase 1)
 windowManager.registerApp(musicPlayer);
@@ -160,14 +162,8 @@ initDailyQuestState();
 refreshDailyQuests();
 initQuestTracking();
 
-// Auto-show daily login modal if reward is available
-setTimeout(() => {
-  if (shouldAutoShowDailyLogin()) {
-    showDailyLoginModal(document.body, () => {
-      console.log('Daily login modal closed');
-    });
-  }
-}, 1000); // Wait 1 second after boot to show modal
+// Auto-show daily login notification/check is now handled in desktop.js on init
+// No need to force modal popup here.
 
 console.log('ReincarnOS booted - All systems active');
 

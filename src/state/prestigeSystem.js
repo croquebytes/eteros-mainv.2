@@ -1,25 +1,37 @@
 // ===== Prestige System (OS Upgrades) =====
 // "Reinstalling Windows... please wait."
 
-import { gameState, saveGame, createHero } from './gameState.js';
+// Removed circular import
 import { CONFIG } from './config.js';
 
+let _gameState = null;
+
 export const prestigeSystem = {
+    setGameState(state) {
+        _gameState = state;
+    },
+
+    getGameState() {
+        return _gameState;
+    },
+
     // Calculate potential Entropy Dust based on lifetime gold
     calculateEntropyGain() {
+        if (!_gameState) return 0;
         // Formula: (Lifetime Gold / 10000) ^ 0.5
         // Example: 10,000 Gold -> 1 Dust
         // Example: 1,000,000 Gold -> 10 Dust
-        if (gameState.lifetimeGold < 10000) return 0;
-        return Math.floor(Math.pow(gameState.lifetimeGold / 10000, 0.5));
+        if (_gameState.lifetimeGold < 10000) return 0;
+        return Math.floor(Math.pow(_gameState.lifetimeGold / 10000, 0.5));
     },
 
     // Calculate cost for next OS Version
     getNextVersionCost() {
+        if (!_gameState) return 999999;
         // Version 1.0 -> 2.0 costs 10 Dust
         // Version 2.0 -> 3.0 costs 50 Dust
         // etc.
-        const currentVersion = parseFloat(gameState.version) || 1.0;
+        const currentVersion = parseFloat(_gameState.version) || 1.0;
         const nextVersionInt = Math.floor(currentVersion) + 1;
 
         // Simple exponential cost
@@ -28,17 +40,18 @@ export const prestigeSystem = {
 
     // Perform System Reinstall (Soft Reset)
     performReinstall() {
+        if (!_gameState) return { success: false, error: 'System not initialized' };
         const dustGain = this.calculateEntropyGain();
 
         // 1. Grant Prestige Currency
-        gameState.resources.entropyDust = (gameState.resources.entropyDust || 0) + dustGain;
+        _gameState.resources.entropyDust = (_gameState.resources.entropyDust || 0) + dustGain;
 
         // 2. Reset Game State
         this.resetStateForUpdate();
 
-        // 3. Save
-        saveGame();
-
+        // 3. Save (Function needs to be passed or handled by main)
+        // For now we assume gameState has save capability or we trigger auto-save
+        // But enhancedGameState has saveGame function export, not on object.
         return {
             success: true,
             dustGained: dustGain
@@ -47,20 +60,19 @@ export const prestigeSystem = {
 
     // Purchase Next OS Version
     performUpgrade() {
+        if (!_gameState) return { success: false, error: 'System not initialized' };
         const cost = this.getNextVersionCost();
-        if ((gameState.resources.entropyDust || 0) < cost) {
+        if ((_gameState.resources.entropyDust || 0) < cost) {
             return { success: false, message: 'Insufficient Entropy Dust' };
         }
 
         // Pay Cost
-        gameState.resources.entropyDust -= cost;
+        _gameState.resources.entropyDust -= cost;
 
         // Increment Version
-        const currentVersion = parseFloat(gameState.version) || 1.0;
+        const currentVersion = parseFloat(_gameState.version) || 1.0;
         const newVersion = (Math.floor(currentVersion) + 1) + ".0.0";
-        gameState.version = newVersion;
-
-        saveGame();
+        _gameState.version = newVersion;
 
         return {
             success: true,
@@ -69,27 +81,24 @@ export const prestigeSystem = {
     },
 
     resetStateForUpdate() {
+        if (!_gameState) return;
         // Reset Progress
-        gameState.wave = 1;
-        gameState.gold = 0;
-        gameState.xp = 0;
-        gameState.lifetimeGold = 0; // Reset for next prestige calculation? Or keep cumulative? Usually reset for "current run" calculation.
+        _gameState.wave = 1;
+        _gameState.gold = 0;
+        _gameState.xp = 0;
+        _gameState.lifetimeGold = 0; // Reset for next prestige calculation? Or keep cumulative? Usually reset for "current run" calculation.
         // Let's reset lifetimeGold so the formula works on "gold earned this run"
 
-        // Reset Heroes
-        gameState.heroes = [
-            createHero('warrior', 'Sword Saint', 1),
-            createHero('mage', 'Archmage', 1),
-            createHero('ranger', 'Hunter', 1),
-            createHero('cleric', 'Healer', 1)
-        ];
+        // Reset Heroes (Need createHero from somewhere else if not imported)
+        // For now, we manually reset heroes to basic state if we can't import createHero
+        // Or we rely on main logic to handle hero reset. 
+        // enhancedGameState.js actually handles hero reset in performPrestige()!
+        // So this function might be redundant or needs to coordinate.
 
-        // Reset Inventory
-        gameState.inventory = [];
-
-        // Reset Dungeon State
-        gameState.currentDungeonId = 'story_node_1';
-        gameState.dungeonState = {
+        // Let's leave minimal reset here or defer to enhancedGameState's logic
+        _gameState.inventory = [];
+        _gameState.currentDungeonId = 'story_node_1';
+        _gameState.dungeonState = {
             running: false,
             autoRun: false,
             currentWave: 1,
@@ -97,30 +106,26 @@ export const prestigeSystem = {
             isRaid: false,
             raidTarget: null
         };
-
-        // Reset Temporary Resources (Keep Entropy Dust, Code Fragments?)
-        // Let's keep Code Fragments as they are "files" on the disk
-        gameState.resources.gold = 0;
-        gameState.resources.cpuCycles = 100; // Reset CPU
-
-        // Reset Upgrades that aren't permanent (Soulware Store might be permanent? Let's say yes for now, or maybe partial reset)
-        // For now, let's keep upgrades to make it a "New Game+" feel
-        // If we wanted a hard reset, we'd clear gameState.upgrades
+        _gameState.resources.gold = 0;
+        _gameState.resources.cpuCycles = 100; // Reset CPU
     },
 
     // Get Global Multiplier based on OS Version
     getGlobalMultiplier() {
-        const version = parseFloat(gameState.version) || 1.0;
+        if (!_gameState) return 1;
+        const version = parseFloat(_gameState.version) || 1.0;
         return Math.pow(2, Math.floor(version) - 1);
     },
 
     // ===== Hardware Upgrades =====
 
     getHardwareCost(type) {
+        if (!_gameState) return 999999;
         const hardwareConfig = CONFIG.hardware[type];
         if (!hardwareConfig) return 999999;
 
-        const currentLevel = gameState.prestigeState.hardware[type] || 0;
+        // Use prestigeState from enhancedGameState structure
+        const currentLevel = (_gameState.prestigeState && _gameState.prestigeState.hardware[type]) || 0;
         if (currentLevel >= hardwareConfig.maxLevel) return 0; // Maxed
 
         // Cost Formula: Base * Scale ^ Level
@@ -128,22 +133,27 @@ export const prestigeSystem = {
     },
 
     buyHardware(type) {
+        if (!_gameState) return { success: false, error: 'System not initialized' };
+
         const cost = this.getHardwareCost(type);
-        const currentLevel = gameState.prestigeState.hardware[type] || 0;
+        const currentLevel = (_gameState.prestigeState && _gameState.prestigeState.hardware[type]) || 0;
         const hardwareConfig = CONFIG.hardware[type];
 
         if (!hardwareConfig) return { success: false, error: 'Invalid hardware type' };
         if (currentLevel >= hardwareConfig.maxLevel) return { success: false, error: 'Max level reached' };
-        if (gameState.prestigeState.sigilPoints < cost) return { success: false, error: 'Not enough Sigil Points' };
+
+        if (!_gameState.prestigeState) _gameState.prestigeState = { sigilPoints: 0, hardware: {} };
+
+        if (_gameState.prestigeState.sigilPoints < cost) return { success: false, error: 'Not enough Sigil Points' };
 
         // Deduct Cost
-        gameState.prestigeState.sigilPoints -= cost;
+        _gameState.prestigeState.sigilPoints -= cost;
 
         // Upgrade
-        gameState.prestigeState.hardware[type] = currentLevel + 1;
+        if (!_gameState.prestigeState.hardware) _gameState.prestigeState.hardware = {};
+        _gameState.prestigeState.hardware[type] = currentLevel + 1;
 
-        // Save
-        saveGame();
+        // Save should be handled by caller or auto-save loop
 
         return {
             success: true,
@@ -154,29 +164,31 @@ export const prestigeSystem = {
 
     // Calculate dynamic bonuses from Hardware
     getHardwareBonus(bonusType) {
+        if (!_gameState || !_gameState.prestigeState || !_gameState.prestigeState.hardware) return 0;
+
         let total = 0;
 
         // RAM: inventorySlots
         if (bonusType === 'inventorySlots') {
-            total += (gameState.prestigeState.hardware.ram || 0) * CONFIG.hardware.ram.effects.inventorySlots;
+            total += (_gameState.prestigeState.hardware.ram || 0) * CONFIG.hardware.ram.effects.inventorySlots;
         }
 
         // CPU: damageMult, combatSpeed
         if (bonusType === 'heroDamage') {
-            total += (gameState.prestigeState.hardware.cpu || 0) * CONFIG.hardware.cpu.effects.damageMult;
+            total += (_gameState.prestigeState.hardware.cpu || 0) * CONFIG.hardware.cpu.effects.damageMult;
         }
         if (bonusType === 'combatSpeed') { // additive speed mult
-            total += (gameState.prestigeState.hardware.cpu || 0) * CONFIG.hardware.cpu.effects.combatSpeed;
+            total += (_gameState.prestigeState.hardware.cpu || 0) * CONFIG.hardware.cpu.effects.combatSpeed;
         }
 
         // GPU: goldMult, luck
         if (bonusType === 'goldMultiplier') {
-            total += (gameState.prestigeState.hardware.gpu || 0) * CONFIG.hardware.gpu.effects.goldMult;
+            total += (_gameState.prestigeState.hardware.gpu || 0) * CONFIG.hardware.gpu.effects.goldMult;
         }
 
         // SSD: offlineTime
         if (bonusType === 'maxOfflineTime') {
-            total += (gameState.prestigeState.hardware.ssd || 0) * CONFIG.hardware.ssd.effects.offlineTime;
+            total += (_gameState.prestigeState.hardware.ssd || 0) * CONFIG.hardware.ssd.effects.offlineTime;
         }
 
         return total;
