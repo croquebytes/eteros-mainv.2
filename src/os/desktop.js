@@ -23,7 +23,7 @@ const APPS = [
   { id: 'lootDownloads', label: 'Loot Downloads', icon: '📦' },
   { id: 'soulwareStore', label: 'Soulware Store', icon: '🛒' },
   { id: 'recycleShrine', label: 'Recycle Shrine', icon: '♻️' },
-  { id: 'systemSigils', label: 'System Sigils', icon: '✨' },
+  { id: 'systemSigils', label: 'System BIOS', icon: '⚙️' },
   { id: 'speculationTerminal', label: 'Speculation Terminal', icon: '📈' },
   { id: 'musicPlayer', label: 'Music Player', icon: '🎵' },
   { id: 'skillTreeApp', label: 'Skill Trees', icon: '🌳' },
@@ -39,6 +39,7 @@ const APPS = [
   { id: 'overclockApp', label: 'Overclock Daemon', icon: '⚡' },
   { id: 'gambitEditor', label: 'Gambit Editor', icon: '🧠' },
   { id: 'systemUpdater', label: 'System Updater', icon: '🔄' },
+  { id: 'miner', label: 'Miner.exe', icon: '⛏️' },
   { id: 'settings', label: 'Settings', icon: '⚙️' }
 ];
 
@@ -351,14 +352,58 @@ function makeIconDraggable(iconEl, iconId) {
     const currentTop = parseFloat(iconEl.style.top) || 0;
 
     // Get target grid cell
+    // Get target grid cell
     const targetCell = getGridCell(currentLeft, currentTop, gridSize);
 
-    // Find nearest unoccupied cell
-    const finalCell = findNearestUnoccupiedCell(
-      targetCell.col,
-      targetCell.row,
-      iconId
-    );
+    // Check if cell is occupied by ANOTHER icon
+    // We need to access state to find WHICH icon is there
+    const state = getDesktopState();
+    let occupiedBy = null;
+
+    // Iterate to find if anyone is at this cell
+    for (const [otherId, pos] of Object.entries(state.icons)) {
+      if (otherId === iconId) continue;
+      const otherCell = getGridCell(pos.x, pos.y, gridSize);
+      if (otherCell.col === targetCell.col && otherCell.row === targetCell.row) {
+        occupiedBy = otherId;
+        break;
+      }
+    }
+
+    let finalCell = targetCell;
+
+    if (occupiedBy) {
+      // SWAP LOGIC: Target spot is taken.
+      // Move the OTHER icon to the dragged icon's OLD spot (or nearest empty if we can't find old spot easily, but old spot is best for swap).
+      // Actually, "Swap" implies exchanging positions.
+      // Where did the dragged icon come from?
+      // We can get its position from state BEFORE the update commands.
+      const oldPos = state.icons[iconId];
+      const oldCell = oldPos ? getGridCell(oldPos.x, oldPos.y, gridSize) : findNearestUnoccupiedCell(0, 0, iconId);
+
+      console.log(`Swap: Moving ${occupiedBy} to (${oldCell.col}, ${oldCell.row})`);
+
+      // Update the OTHER icon's position visually and state-wise
+      const otherIconEl = document.querySelector(`.desktop-icon[data-icon-id="${occupiedBy}"]`);
+      if (otherIconEl) {
+        const oldPixelPos = getCellPosition(oldCell.col, oldCell.row, gridSize);
+        otherIconEl.style.left = oldPixelPos.x + 'px';
+        otherIconEl.style.top = oldPixelPos.y + 'px';
+        // Update state for the swapped icon
+        updateIconPosition(occupiedBy, oldPixelPos.x, oldPixelPos.y);
+      }
+
+      // Now current icon takes the target spot
+      finalCell = targetCell;
+    } else {
+      // Standard behavior: snap to target if empty, or nearest empty if invalid?
+      // Actually, we want to allow snapping to ANY empty cell.
+      // If valid drag, snap to it.
+      // But wait, findNearestUnoccupiedCell was previously used to find the spiraling spot.
+      // If user drops on empty spot, use it.
+      // If invalid (e.g. out of bounds?), getGridCell clamps it.
+      finalCell = targetCell;
+    }
 
     // Convert cell back to pixels
     const finalPos = getCellPosition(finalCell.col, finalCell.row, gridSize);
@@ -369,7 +414,7 @@ function makeIconDraggable(iconEl, iconId) {
     // Save icon position to state
     updateIconPosition(iconId, finalPos.x, finalPos.y);
 
-    console.log(`Icon ${iconId} moved to cell (${finalCell.col}, ${finalCell.row}) = (${finalPos.x}px, ${finalPos.y}px)`);
+    console.log(`Icon ${iconId} moved to cell (${finalCell.col}, ${finalCell.row})`);
 
     if (movedDuringDrag) {
       iconEl.dataset.justDragged = '1';
@@ -401,6 +446,13 @@ function createTaskbar() {
 
   const tray = document.createElement('div');
   tray.className = 'taskbar-tray';
+
+  const version = document.createElement('span');
+  version.className = 'taskbar-version';
+  version.textContent = 'v2.0';
+  version.style.marginRight = '8px';
+  version.style.opacity = '0.7';
+  tray.appendChild(version);
 
   const clock = document.createElement('span');
   clock.id = 'taskbar-clock';

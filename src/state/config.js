@@ -231,5 +231,60 @@ export const CONFIG = {
       duration: 3000,
       absorb: 100
     }
+  },
+  // === Hardware (Prestige Upgrades) ===
+  hardware: {
+    ram: {
+      id: 'ram',
+      name: 'RAM Expansion',
+      description: 'Increases Max Inventory Slots and System Stability.',
+      icon: '💾',
+      baseCost: 1,
+      costScale: 1.5,
+      maxLevel: 20,
+      effects: {
+        inventorySlots: 5,    // +5 slots per level
+        systemStability: 0.05 // +5% stability (crit resistance/defense)
+      }
+    },
+    cpu: {
+      id: 'cpu',
+      name: 'CPU Overclock',
+      description: 'Increases Global Damage and Task Speed.',
+      icon: '⚡',
+      baseCost: 2,
+      costScale: 1.8,
+      maxLevel: 20,
+      effects: {
+        damageMult: 0.10,     // +10% damage per level
+        combatSpeed: 0.02     // +2% combat speed
+      }
+    },
+    gpu: {
+      id: 'gpu',
+      name: 'GPU Integration',
+      description: 'Improves item rarity and Gold generation.',
+      icon: '💎',
+      baseCost: 3,
+      costScale: 2.0,
+      maxLevel: 10,
+      effects: {
+        goldMult: 0.15,       // +15% gold
+        luck: 5               // +5 luck (affects drop rates)
+      }
+    },
+    ssd: {
+      id: 'ssd',
+      name: 'SSD Storage',
+      description: 'Extends Offline Time and Efficiency.',
+      icon: '🔋',
+      baseCost: 1,
+      costScale: 1.4,
+      maxLevel: 10,
+      effects: {
+        offlineTime: 3600000, // +1 hour
+        offlineEfficiency: 0.05 // +5% efficiency
+      }
+    }
   }
 };

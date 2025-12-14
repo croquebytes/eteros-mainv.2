@@ -84,7 +84,12 @@ function autoArrangeIconsInGrid(gridSize) {
     { id: 'cosmeticTerminal', label: 'Aesthetic Terminal' },
     { id: 'systemMonitor', label: 'System Monitor' },
     { id: 'resourceTracker', label: 'Resource Tracker' },
-    { id: 'settings', label: 'Settings' }
+    { id: 'settings', label: 'Settings' },
+    { id: 'petTerminal', label: 'Daemonling Pet' },
+    { id: 'fakeBrowser', label: 'NetSim Browser' },
+    { id: 'systemUpdater', label: 'System Updater' },
+    { id: 'gambitEditor', label: 'Gambit Editor' },
+    { id: 'overclockDaemon', label: 'Overclock Daemon' }
   ];
 
   const icons = {};
@@ -429,7 +434,74 @@ export function resetDesktopState() {
   currentState = getDefaultDesktopState();
   saveDesktopState(currentState, true);
   console.log('Desktop state reset to defaults');
+  // Perform self-healing check on load
+  rectifyIconPositions();
+
   return currentState;
+}
+
+/**
+ * Scan all icons and resolve invalid overlaps
+ */
+export function rectifyIconPositions() {
+  const state = getDesktopState();
+  const gridSize = state.settings.iconGridSize;
+  const icons = state.icons;
+
+  if (!icons) return;
+
+  const positions = new Map(); // key="col,row" -> iconId
+  const collisions = [];
+
+  // 1. Identify collisions
+  Object.values(icons).forEach(icon => {
+    const cell = getGridCell(icon.x, icon.y, gridSize);
+    const key = `${cell.col},${cell.row}`;
+
+    if (positions.has(key)) {
+      collisions.push(icon.id); // This icon is colliding
+    } else {
+      positions.set(key, icon.id);
+    }
+  });
+
+  // 2. Resolve collisions
+  if (collisions.length > 0) {
+    console.warn(`Found ${collisions.length} icon collisions. Resolving...`);
+
+    collisions.forEach(iconId => {
+      // Find a new spot for this icon
+      const currentIcon = icons[iconId];
+      if (!currentIcon) return;
+
+      const currentCell = getGridCell(currentIcon.x, currentIcon.y, gridSize);
+
+      // Pass excludeIconId=null because we want to avoid ALL occupied cells,
+      // including the one it just came from if it was occupied by someone else
+      // (which it was, that's why it's in collisions list).
+      // Wait, findNearestUnoccupiedCell checks isCellOccupied.
+      // isCellOccupied checks state.icons.
+      // state.icons still has the old colliding position for this icon.
+      // But we passed the OTHER icon into 'positions' map?
+      // No, findNearest is purely based on current state.
+
+      // Algorithm:
+      // 1. We know current spot is bad.
+      // 2. Search for nearest empty spot starting from (0,0) or (currentCol, currentRow).
+      //    Let's search from its intended location outward.
+      const newCell = findNearestUnoccupiedCell(currentCell.col, currentCell.row, iconId);
+
+      const newPos = getCellPosition(newCell.col, newCell.row, gridSize);
+
+      console.log(`Moved colliding icon ${iconId} from (${currentCell.col},${currentCell.row}) to (${newCell.col},${newCell.row})`);
+
+      // Update state immediately
+      icons[iconId].x = newPos.x;
+      icons[iconId].y = newPos.y;
+    });
+
+    saveDesktopState(state, true);
+  }
 }
 
 // ===== Initialize on import =====

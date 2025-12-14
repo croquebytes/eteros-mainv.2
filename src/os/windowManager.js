@@ -32,6 +32,27 @@ export const windowManager = {
 
     // Restore any previously open windows from state
     this.restoreOpenWindows();
+
+    // Mobile Back Button Support
+    window.addEventListener('popstate', (event) => {
+      this.handlePopState(event);
+    });
+  },
+
+  handlePopState(event) {
+    if (this.activeWindowId && this.isWindowOpen(this.activeWindowId)) {
+      // If we are in mobile mode, going back should close the window
+      // But we need to distinguish between "Back to Desktop" and "Back to previous page" (if we had nav)
+      // For ReincarnOS, pressing back when window is open -> Close Window.
+
+      // However, popstate fires AFTER the history change.
+      // If we opened a window, we pushed state. Hitting back pops it (event.state is null or previous).
+      // If event.state is null (desktop), we close the window.
+
+      if (!event.state || !event.state.windowOpen) {
+        this.closeWindow(this.activeWindowId, true); // true = fromHistory
+      }
+    }
   },
 
   registerApp(appConfig) {
@@ -101,6 +122,15 @@ export const windowManager = {
     if (!entry || !this.windowLayerEl) {
       console.error('Entry or windowLayerEl missing', { entry, windowLayerEl: this.windowLayerEl });
       return;
+    }
+
+    // Add History State for Mobile Back Button
+    if (getSettings().isMobileMode) {
+      // Only push if not already at this state to avoid dupes
+      const currentState = history.state;
+      if (!currentState || currentState.appId !== appId) {
+        history.pushState({ windowOpen: true, appId: appId }, '', `#${appId}`);
+      }
     }
 
     // If window is minimized, just restore it
@@ -660,9 +690,21 @@ export const windowManager = {
   /**
    * Close a window (hide and remove from running list)
    */
-  closeWindow(appId) {
+  closeWindow(appId, fromHistory = false) {
     const entry = this.windows[appId];
     if (entry && entry.el) {
+
+      // Update History if needed
+      // If we are closing manually (clicked X), we might want to go back in history if the current state is this window
+      // But triggering history.back() here could cause a loop if processed in popstate.
+      // Simplest: If not from history, and history state has this app, go back?
+      // For now, let's keep it simple: Browser back closes window. Close button closes window (and leaves "forward" history? No, that's fine).
+      // Ideally:
+      if (!fromHistory && getSettings().isMobileMode && history.state && history.state.appId === appId) {
+        history.back(); // This will trigger popstate, which calls closeWindow(true).
+        return; // Let popstate handle the actual closing to avoid duplicates
+      }
+
       // Play close sound
       soundManager.play('close');
 

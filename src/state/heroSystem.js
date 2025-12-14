@@ -4,11 +4,18 @@
 import { HERO_TEMPLATES } from './heroTemplates.js';
 import { getNodeById } from '../data/skillTrees.js';
 import { applyHeroSynergyBonuses } from './heroSynergies.js';
+import { createDefaultScript } from './gambitSystem.js';
 
 // Helper to get research bonuses (defined later to avoid circular dependency issues)
 let researchBonusesGetter = null;
+let hardwareBonusesGetter = null;
+
 export function setResearchBonusesGetter(getter) {
   researchBonusesGetter = getter;
+}
+
+export function setHardwareBonusesGetter(getter) {
+  hardwareBonusesGetter = getter;
 }
 
 // XP Curve Configuration
@@ -86,6 +93,9 @@ export function createHero(templateId, level = 1) {
     lastAttackTime: 0,
     statusEffects: [],
 
+    // Automation (Gambits)
+    script: createDefaultScript(template.role),
+
     // Dispatch state
     onDispatch: false,
     dispatchId: null,
@@ -158,6 +168,19 @@ export function updateHeroStats(hero, systemWideSoulware = []) {
       if (research.heroAttackSpeedBoost && research.heroAttackSpeedBoost > 1) {
         stats.spd = Math.floor(stats.spd * research.heroAttackSpeedBoost);
       }
+    }
+  }
+
+  // Hardware bonuses (Prestige)
+  if (hardwareBonusesGetter) {
+    const damageMult = hardwareBonusesGetter('heroDamage');
+    if (damageMult > 0) {
+      stats.atk = Math.floor(stats.atk * (1 + damageMult));
+    }
+
+    const speedMult = hardwareBonusesGetter('combatSpeed');
+    if (speedMult > 0) {
+      stats.spd = Math.floor(stats.spd * (1 + speedMult));
     }
   }
 

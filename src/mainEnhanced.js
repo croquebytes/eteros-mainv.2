@@ -40,6 +40,8 @@ import { fakeBrowserApp as fakeBrowser } from './os/apps/fakeBrowser.js';
 // NEW APPS (Systems & Features)
 import { eBuyApp } from './os/apps/eBuy.js';
 import { overclockApp } from './os/apps/overclockApp.js';
+import { gambitEditor } from './os/apps/gambitEditor.js';
+import { minerApp } from './os/apps/minerApp.js';
 
 // Import new game systems
 import { ResourceManager } from './state/resourceManager.js';
@@ -49,7 +51,9 @@ import { audioManager } from './state/audioManager.js';
 import { eventBus } from './state/eventBus.js';
 import { themeManager } from './state/themeManager.js';
 import { tasksSystem } from './state/tasksSystem.js';
-import { setResearchBonusesGetter } from './state/heroSystem.js';
+import { minerSystem } from './state/minerSystem.js';
+import { setResearchBonusesGetter, setHardwareBonusesGetter } from './state/heroSystem.js';
+import { prestigeSystem } from './state/prestigeSystem.js';
 
 // Make gameState available globally for debugging
 window.gameState = gameState;
@@ -122,6 +126,8 @@ windowManager.registerApp(fakeBrowser);
 // NEW APPS (Systems & Features)
 windowManager.registerApp(eBuyApp);
 windowManager.registerApp(overclockApp);
+windowManager.registerApp(gambitEditor);
+windowManager.registerApp(minerApp);
 
 // Start game systems
 startAutoSave();
@@ -131,11 +137,13 @@ initSynergySystem();
 
 // Set up research bonuses getter for hero system
 setResearchBonusesGetter(() => gameState.research);
+setHardwareBonusesGetter((type) => prestigeSystem.getHardwareBonus(type));
 
 // Start task scheduler tick loop (updates every 100ms)
 setInterval(() => {
   taskScheduler.tick();
   resourceManager.tick(0.1); // 0.1 seconds
+  minerSystem.tick(0.1);
 }, 100);
 
 console.log('ReincarnOS booted - All systems active');

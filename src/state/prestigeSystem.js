@@ -111,9 +111,74 @@ export const prestigeSystem = {
     // Get Global Multiplier based on OS Version
     getGlobalMultiplier() {
         const version = parseFloat(gameState.version) || 1.0;
-        // v1.0 = 1x
-        // v2.0 = 2x
-        // v3.0 = 4x
         return Math.pow(2, Math.floor(version) - 1);
+    },
+
+    // ===== Hardware Upgrades =====
+
+    getHardwareCost(type) {
+        const hardwareConfig = CONFIG.hardware[type];
+        if (!hardwareConfig) return 999999;
+
+        const currentLevel = gameState.prestigeState.hardware[type] || 0;
+        if (currentLevel >= hardwareConfig.maxLevel) return 0; // Maxed
+
+        // Cost Formula: Base * Scale ^ Level
+        return Math.floor(hardwareConfig.baseCost * Math.pow(hardwareConfig.costScale, currentLevel));
+    },
+
+    buyHardware(type) {
+        const cost = this.getHardwareCost(type);
+        const currentLevel = gameState.prestigeState.hardware[type] || 0;
+        const hardwareConfig = CONFIG.hardware[type];
+
+        if (!hardwareConfig) return { success: false, error: 'Invalid hardware type' };
+        if (currentLevel >= hardwareConfig.maxLevel) return { success: false, error: 'Max level reached' };
+        if (gameState.prestigeState.sigilPoints < cost) return { success: false, error: 'Not enough Sigil Points' };
+
+        // Deduct Cost
+        gameState.prestigeState.sigilPoints -= cost;
+
+        // Upgrade
+        gameState.prestigeState.hardware[type] = currentLevel + 1;
+
+        // Save
+        saveGame();
+
+        return {
+            success: true,
+            newLevel: currentLevel + 1,
+            message: `Upgraded ${hardwareConfig.name} to Level ${currentLevel + 1}`
+        };
+    },
+
+    // Calculate dynamic bonuses from Hardware
+    getHardwareBonus(bonusType) {
+        let total = 0;
+
+        // RAM: inventorySlots
+        if (bonusType === 'inventorySlots') {
+            total += (gameState.prestigeState.hardware.ram || 0) * CONFIG.hardware.ram.effects.inventorySlots;
+        }
+
+        // CPU: damageMult, combatSpeed
+        if (bonusType === 'heroDamage') {
+            total += (gameState.prestigeState.hardware.cpu || 0) * CONFIG.hardware.cpu.effects.damageMult;
+        }
+        if (bonusType === 'combatSpeed') { // additive speed mult
+            total += (gameState.prestigeState.hardware.cpu || 0) * CONFIG.hardware.cpu.effects.combatSpeed;
+        }
+
+        // GPU: goldMult, luck
+        if (bonusType === 'goldMultiplier') {
+            total += (gameState.prestigeState.hardware.gpu || 0) * CONFIG.hardware.gpu.effects.goldMult;
+        }
+
+        // SSD: offlineTime
+        if (bonusType === 'maxOfflineTime') {
+            total += (gameState.prestigeState.hardware.ssd || 0) * CONFIG.hardware.ssd.effects.offlineTime;
+        }
+
+        return total;
     }
 };

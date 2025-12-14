@@ -5,6 +5,7 @@ import { createHero, addXpToHero, updateHeroStats, calculateXpForLevel } from '.
 import { createGachaState } from './gachaSystem.js';
 import { createDispatchState, updateDispatches } from './dispatchSystem.js';
 import { getDungeonById } from './dungeonTemplates.js';
+import { prestigeSystem } from './prestigeSystem.js';
 
 // ===== Main Game State =====
 export const gameState = {
@@ -50,7 +51,16 @@ export const gameState = {
     codeFragments: 0,  // From recycling items
     memoryBlocks: 0,   // From defrag tasks
     cpuCycles: 100,    // Passive generation, used for research
-    entropyDust: 0     // From bosses and prestige
+    entropyDust: 0,    // From bosses and prestige
+    bitCredits: 0      // Crypto mining
+  },
+
+  // Miner System
+  minerState: {
+    unlocked: false,
+    gpus: [],    // Array of installed GPU items
+    hashRate: 0, // Total hash rate
+    totalMined: 0
   },
 
   // Research System
@@ -134,6 +144,12 @@ export const gameState = {
     sigilPoints: 0,
     totalPrestiges: 0,
     unlockedBonuses: [],
+    hardware: {
+      ram: 0,
+      cpu: 0,
+      gpu: 0,
+      ssd: 0
+    },
     prestigeReady: false
   },
 
@@ -231,9 +247,13 @@ function refreshWeeklyContracts() {
 
 // ===== Currency Management =====
 export function addGold(amount) {
-  gameState.gold += amount;
-  gameState.lifetimeGold += amount;
-  gameState.stats.totalGoldEarned += amount;
+  // Apply GPU Hardware Bonus
+  const hardwareMult = 1 + (prestigeSystem.getHardwareBonus ? prestigeSystem.getHardwareBonus('goldMultiplier') : 0);
+  const finalAmount = Math.floor(amount * hardwareMult);
+
+  gameState.gold += finalAmount;
+  gameState.lifetimeGold += finalAmount;
+  gameState.stats.totalGoldEarned += finalAmount;
 }
 
 export function spendGold(amount) {
@@ -312,8 +332,12 @@ export function getActivePartyHeroes() {
 
 // ===== Inventory Management =====
 export function addItemToInventory(item) {
-  if (gameState.inventory.length >= gameState.maxInventorySlots) {
-    return { success: false, error: 'Inventory full' };
+  // Apply RAM Hardware Bonus
+  const bonusSlots = prestigeSystem.getHardwareBonus ? prestigeSystem.getHardwareBonus('inventorySlots') : 0;
+  const effectiveLimit = gameState.maxInventorySlots + bonusSlots;
+
+  if (gameState.inventory.length >= effectiveLimit) {
+    return { success: false, error: 'Inventory full (Upgrade RAM to store more)' };
   }
 
   gameState.inventory.push(item);
@@ -424,7 +448,10 @@ export function loadGame() {
 function calculateOfflineProgress(state, offlineTimeMs) {
   // TODO: Calculate additional offline systems (dispatch completions, etc.)
   const offlineHours = offlineTimeMs / 3600000;
-  const maxOfflineHours = 24;  // Cap at 24 hours
+
+  // Apply SSD Hardware Bonus
+  const bonusTimeMs = prestigeSystem.getHardwareBonus ? prestigeSystem.getHardwareBonus('maxOfflineTime') : 0;
+  const maxOfflineHours = 24 + (bonusTimeMs / 3600000);
 
   const effectiveHours = Math.min(offlineHours, maxOfflineHours);
 
@@ -643,6 +670,7 @@ export function performPrestige() {
     sigilPoints: gameState.prestigeState.sigilPoints + rewards.sigilPoints,
     totalPrestiges: gameState.prestigeState.totalPrestiges + 1,
     unlockedBonuses: [...gameState.prestigeState.unlockedBonuses],
+    hardware: { ...gameState.prestigeState.hardware },
     lifetimeGold: gameState.lifetimeGold,
     stats: { ...gameState.stats },
     settings: { ...gameState.settings },

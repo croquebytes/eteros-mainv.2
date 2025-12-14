@@ -216,5 +216,11 @@ export const RESOURCE_INFO = {
     icon: '✨',
     description: 'Late-game upgrade material from malware',
     color: '#ef4444'
+  },
+  bitCredits: {
+    name: 'BitCredits',
+    icon: '🪙',
+    description: 'Mined cryptocurrency',
+    color: '#fcd34d'
   }
 };
