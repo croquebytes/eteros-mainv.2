@@ -220,30 +220,81 @@ export const windowManager = {
       winEl.className = 'os-window';
       winEl.dataset.appId = appId;
 
-      // Load saved position or use default centered position
+      // Load saved position or use app-specific preferred size
       const savedWindow = state.windows[appId];
-      const defaultWidth = 600;
-      const defaultHeight = 400;
-      const defaultX = Math.max(50, (window.innerWidth - defaultWidth) / 2);
-      const defaultY = Math.max(50, (window.innerHeight - defaultHeight) / 2);
+      const settings = getSettings();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const taskbarHeight = 40;
+      const availableHeight = viewportHeight - taskbarHeight;
+
+      // Get app-specific preferred dimensions or use defaults
+      const appPreferredSize = entry.app.preferredSize || {};
+      let defaultWidth = appPreferredSize.width || 600;
+      let defaultHeight = appPreferredSize.height || 400;
+
+      // On mobile, maximize by default for better UX
+      if (settings.isMobileMode) {
+        defaultWidth = viewportWidth;
+        defaultHeight = availableHeight;
+      } else {
+        // On desktop, constrain to viewport if app's preferred size is too large
+        const maxWidth = viewportWidth - 100; // Leave 50px margin on each side
+        const maxHeight = availableHeight - 100; // Leave 50px margin top/bottom
+
+        defaultWidth = Math.min(defaultWidth, maxWidth);
+        defaultHeight = Math.min(defaultHeight, maxHeight);
+      }
 
       if (savedWindow) {
-        winEl.style.left = savedWindow.x + 'px';
-        winEl.style.top = savedWindow.y + 'px';
-        winEl.style.width = savedWindow.width + 'px';
-        winEl.style.height = savedWindow.height + 'px';
+        // Use saved position but ensure it's fully visible
+        let x = savedWindow.x;
+        let y = savedWindow.y;
+        let w = savedWindow.width;
+        let h = savedWindow.height;
+
+        // Constrain to viewport
+        if (x + w > viewportWidth) {
+          x = Math.max(0, viewportWidth - w - 20);
+        }
+        if (y + h > availableHeight) {
+          y = Math.max(0, availableHeight - h - 20);
+        }
+
+        // Ensure minimum visibility (at least 200px width visible)
+        if (x < -w + 200) {
+          x = -w + 200;
+        }
+        if (y < 0) {
+          y = 0;
+        }
+
+        winEl.style.left = x + 'px';
+        winEl.style.top = y + 'px';
+        winEl.style.width = w + 'px';
+        winEl.style.height = h + 'px';
       } else {
-        // Cascading logic
-        const offset = 30;
-        const baseX = 50;
-        const baseY = 50;
+        // For new windows: center on screen (desktop) or maximize (mobile)
+        let x, y;
 
-        // Count open windows to determine offset
-        const openCount = Object.values(this.windows).filter(w => w.el && w.el.style.display !== 'none').length;
-        const cascadeIndex = openCount % 10; // Reset after 10 windows
+        if (settings.isMobileMode) {
+          // Mobile: maximize to fill screen
+          x = 0;
+          y = 0;
+        } else {
+          // Desktop: center the window
+          x = Math.max(20, (viewportWidth - defaultWidth) / 2);
+          y = Math.max(20, (availableHeight - defaultHeight) / 2);
 
-        const x = Math.min(baseX + (cascadeIndex * offset), window.innerWidth - defaultWidth - 50);
-        const y = Math.min(baseY + (cascadeIndex * offset), window.innerHeight - defaultHeight - 50);
+          // Apply subtle cascade for multiple windows
+          const openCount = Object.values(this.windows).filter(w => w.el && w.el.style.display !== 'none').length;
+          if (openCount > 0) {
+            const cascadeOffset = 30;
+            const cascadeIndex = openCount % 8; // Reset after 8 windows
+            x = Math.min(x + (cascadeIndex * cascadeOffset), viewportWidth - defaultWidth - 20);
+            y = Math.min(y + (cascadeIndex * cascadeOffset), availableHeight - defaultHeight - 20);
+          }
+        }
 
         winEl.style.left = x + 'px';
         winEl.style.top = y + 'px';

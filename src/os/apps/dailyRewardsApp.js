@@ -16,6 +16,14 @@ export const dailyRewardsApp = {
   title: 'Daily Rewards',
   icon: '📅',
 
+  // Preferred window dimensions for optimal UX
+  preferredSize: {
+    width: 700,
+    height: 600,
+    minWidth: 420,
+    minHeight: 480
+  },
+
   createContent(rootEl) {
     this.render(rootEl);
   },
@@ -25,44 +33,81 @@ export const dailyRewardsApp = {
     const streakInfo = getLoginStreakInfo();
 
     rootEl.innerHTML = `
-      <div class="window-content daily-rewards-app" style="background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); padding: 20px; color: white; display: flex; flex-direction: column; height: 100%;">
+      <div class="window-content daily-rewards-app" style="
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); 
+        padding: clamp(12px, 3vw, 24px); 
+        color: white; 
+        display: flex; 
+        flex-direction: column; 
+        height: 100%;
+        overflow: hidden;
+      ">
         
         <!-- Header Section -->
         <div class="streak-header" style="
           background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-          border-radius: 12px;
-          padding: 20px;
+          border-radius: clamp(8px, 2vw, 12px);
+          padding: clamp(16px, 3vw, 24px);
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 20px;
+          margin-bottom: clamp(12px, 2.5vw, 20px);
           box-shadow: 0 10px 25px rgba(124, 58, 237, 0.3);
+          flex-shrink: 0;
         ">
           <div class="streak-info">
-             <div style="font-size: 13px; opacity: 0.8; letter-spacing: 1px; text-transform: uppercase;">Current Streak</div>
-             <div style="font-size: 36px; font-weight: 800; line-height: 1.2;">
-                ${streakInfo.currentStreak} <span style="font-size: 16px; font-weight: 600; opacity: 0.9;">DAYS</span>
+             <div style="font-size: clamp(11px, 2vw, 13px); opacity: 0.85; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 600;">Current Streak</div>
+             <div style="font-size: clamp(28px, 5vw, 42px); font-weight: 800; line-height: 1.1; margin-top: 4px;">
+                ${streakInfo.currentStreak} <span style="font-size: clamp(14px, 2.5vw, 18px); font-weight: 600; opacity: 0.9;">DAYS</span>
              </div>
           </div>
-          <div class="streak-icon" style="font-size: 48px;">🔥</div>
+          <div class="streak-icon" style="font-size: clamp(40px, 6vw, 56px); filter: drop-shadow(0 2px 8px rgba(251, 146, 60, 0.5));">🔥</div>
         </div>
 
         <!-- Scrollable Grid -->
-        <div class="rewards-scroll-container" style="flex: 1; overflow-y: auto; padding-right: 4px;">
-           <div class="daily-rewards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;">
+        <div class="rewards-scroll-container" style="
+          flex: 1; 
+          overflow-y: auto; 
+          overflow-x: hidden;
+          padding-right: 4px;
+          margin-right: -4px;
+        ">
+           <div class="daily-rewards-grid" style="
+             display: grid; 
+             grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr)); 
+             gap: clamp(10px, 2vw, 16px);
+           ">
              ${rewards.map(reward => renderRewardCard(reward)).join('')}
            </div>
         </div>
 
         <!-- Footer / Status -->
-        <div class="rewards-footer" style="margin-top: 20px;">
+        <div class="rewards-footer" style="margin-top: clamp(12px, 2.5vw, 20px); flex-shrink: 0;">
            ${canClaimDailyReward() ? `
-             <div class="status-banner" style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; padding: 12px; border-radius: 8px; text-align: center; font-weight: 600; animation: pulse-green 2s infinite;">
+             <div class="status-banner" style="
+               background: rgba(16, 185, 129, 0.2); 
+               border: 2px solid #10b981; 
+               color: #34d399; 
+               padding: clamp(12px, 2.5vw, 16px); 
+               border-radius: 8px; 
+               text-align: center; 
+               font-weight: 600;
+               font-size: clamp(14px, 2.5vw, 16px);
+               animation: pulse-green 2s infinite;
+             ">
                ✨ Reward Available! Claim Day ${streakInfo.currentStreak} above.
              </div>
            ` : `
-             <div class="status-banner" style="background: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; color: #60a5fa; padding: 12px; border-radius: 8px; text-align: center; font-size: 13px;">
-               Next reward available in: <span id="dr-timer">Calculating...</span>
+             <div class="status-banner" style="
+               background: rgba(59, 130, 246, 0.1); 
+               border: 2px solid #3b82f6; 
+               color: #60a5fa; 
+               padding: clamp(12px, 2.5vw, 16px); 
+               border-radius: 8px; 
+               text-align: center; 
+               font-size: clamp(13px, 2.5vw, 15px);
+             ">
+               Next reward available in: <span id="dr-timer" style="font-weight: 600;">Calculating...</span>
              </div>
            `}
         </div>
@@ -139,7 +184,7 @@ function renderRewardCard(reward) {
 
   const rewardsList = Object.entries(reward.rewards).map(([key, value]) => {
     const label = formatResourceName(key);
-    return `<div style="font-size: 11px; color: #94a3b8;">${value} ${label}</div>`;
+    return `<div style="font-size: clamp(12px, 2.2vw, 13px); color: rgba(255,255,255,0.9); font-weight: 500; line-height: 1.5;">${value} ${label}</div>`;
   }).join('');
 
   return `
@@ -148,23 +193,27 @@ function renderRewardCard(reward) {
          data-status="${reward.current ? 'current' : reward.locked ? 'locked' : 'claimed'}"
          style="
            position: relative;
-           padding: 12px;
+           padding: clamp(12px, 2.5vw, 16px);
            border: 2px solid ${reward.current ? '#10b981' : reward.locked ? '#64748b' : '#3b82f6'};
-           border-radius: 8px;
+           border-radius: clamp(6px, 1.5vw, 10px);
            background: ${reward.current ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : reward.locked ? '#1e293b' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'};
            cursor: ${clickable ? 'pointer' : 'default'};
            opacity: ${reward.locked ? '0.5' : '1'};
-           transition: transform 0.2s, box-shadow 0.2s;
+           transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
            ${clickable ? 'animation: pulse 2s infinite;' : ''}
+           min-height: 180px;
+           display: flex;
+           flex-direction: column;
+           justify-content: space-between;
          ">
-      <div style="text-align: center; color: white;">
-        <div style="font-size: 32px; margin-bottom: 5px;">${reward.icon}</div>
-        <div style="font-size: 12px; font-weight: bold; margin-bottom: 3px;">Day ${reward.day}</div>
-        ${reward.special ? '<div style="font-size: 10px; background: #fbbf24; color: #000; padding: 2px 6px; border-radius: 3px; display: inline-block; margin-bottom: 5px;">SPECIAL</div>' : ''}
-        <div style="min-height: 60px;">
+      <div style="text-align: center; color: white; display: flex; flex-direction: column; height: 100%;">
+        <div style="font-size: clamp(28px, 5vw, 40px); margin-bottom: clamp(6px, 1.5vw, 10px); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">${reward.icon}</div>
+        <div style="font-size: clamp(13px, 2.5vw, 15px); font-weight: 700; margin-bottom: clamp(4px, 1vw, 6px); letter-spacing: 0.3px;">Day ${reward.day}</div>
+        ${reward.special ? '<div style="font-size: clamp(10px, 2vw, 11px); background: #fbbf24; color: #000; padding: 3px 8px; border-radius: 4px; display: inline-block; margin: 0 auto 6px; font-weight: 700; letter-spacing: 0.5px;">✨ SPECIAL</div>' : ''}
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 65px; margin: 6px 0;">
           ${rewardsList}
         </div>
-        <div style="font-size: 11px; font-weight: bold; margin-top: 8px; padding: 4px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+        <div style="font-size: clamp(12px, 2.5vw, 14px); font-weight: 700; margin-top: auto; padding: clamp(6px, 1.5vw, 8px); background: rgba(0,0,0,0.25); border-radius: 4px; letter-spacing: 0.3px;">
           ${statusLabel}
         </div>
       </div>

@@ -9818,6 +9818,7 @@ body.compact-mode .enemy-card {
     display: block;
   }
 }
+
 /* ===== Snap Preview & Window Animations (Agentic Enhancements) ===== */
 
 .snap-preview {
@@ -9850,6 +9851,7 @@ body.compact-mode .enemy-card {
     transform: scale(0.92) translateY(10px);
     filter: blur(4px);
   }
+
   100% {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -9863,6 +9865,7 @@ body.compact-mode .enemy-card {
     transform: scale(1);
     filter: blur(0);
   }
+
   100% {
     opacity: 0;
     transform: scale(0.92) translateY(10px);
@@ -9992,6 +9995,7 @@ body.compact-mode .enemy-card {
 /* ===== Mobile Responsiveness Improvements ===== */
 
 @media (max-width: 768px) {
+
   /* Quest Explorer Mobile Layout */
   .quest-explorer-fs {
     flex-direction: column;
@@ -10001,7 +10005,7 @@ body.compact-mode .enemy-card {
     padding: 8px;
     gap: 8px;
   }
-  
+
   .qe-address-bar {
     font-size: 12px;
   }
@@ -10011,7 +10015,7 @@ body.compact-mode .enemy-card {
     flex: 1;
     overflow: hidden;
   }
-  
+
   .qe-fs-browser,
   .qe-process-monitor {
     width: 100%;
@@ -10022,7 +10026,7 @@ body.compact-mode .enemy-card {
   .battle-stats-row {
     flex-wrap: wrap;
   }
-  
+
   .stat-box {
     flex: 1;
     min-width: 30%;
@@ -10036,7 +10040,8 @@ body.compact-mode .enemy-card {
   }
 
   .df-action {
-    display: none; /* Hide hover action on mobile */
+    display: none;
+    /* Hide hover action on mobile */
   }
 
   /* Ensure detail panel fits */
@@ -10048,7 +10053,7 @@ body.compact-mode .enemy-card {
     bottom: 0;
     z-index: 50;
     padding: 10px;
-    background: rgba(0,0,0,0.8);
+    background: rgba(0, 0, 0, 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -10058,6 +10063,77 @@ body.compact-mode .enemy-card {
     width: 100%;
     max-height: 100%;
     overflow-y: auto;
+  }
+}
+
+/* ===== Daily Rewards App Mobile Styles ===== */
+@media (max-width: 640px) {
+  .daily-rewards-app .daily-rewards-grid {
+    grid-template-columns: 1fr !important;
+    /* Single column on very small screens */
+  }
+
+  .daily-rewards-app .reward-card {
+    min-height: 140px !important;
+    /* Shorter on mobile since we have single column */
+  }
+
+  .daily-rewards-app .streak-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .daily-rewards-app .streak-info {
+    width: 100%;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 768px) {
+  .daily-rewards-app .daily-rewards-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    /* Two columns on small tablets */
+  }
+}
+
+/* General Mobile Window Improvements */
+@media (max-width: 768px) {
+
+  /* Ensure buttons are touch-friendly */
+  .btn,
+  button {
+    min-height: 44px;
+    /* iOS recommended touch target */
+    font-size: max(16px, var(--text-base));
+    /* Prevent zoom on iOS */
+  }
+
+  /* Improve window title bar on mobile */
+  .os-window-title {
+    font-size: clamp(16px, 3vw, 18px);
+  }
+
+  /* Better scrolling on mobile */
+  .os-window-body {
+    -webkit-overflow-scrolling: touch;
+    /* Smooth scrolling on iOS */
+  }
+
+  /* Prevent horizontal overflow */
+  .os-window {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+}
+
+/* Improve notification badges on mobile */
+@media (max-width: 768px) {
+  .icon-notification-badge {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+    top: -8px;
+    right: -8px;
   }
 }
 
@@ -10083,8 +10159,15 @@ body.compact-mode .enemy-card {
 }
 
 @keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 /* Modal deprecated styles cleanups if needed, but we keep them for compatibility for now */
